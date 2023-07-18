@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="../CSS/expenseHome.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header id="main-header">
+        <div class="heading-div">
+            <h1 id="heading">Expense Details</h1>
+        </div>
+        <div class="income-div">
+            <h2 id="income">Income: </h2>
+        </div>
+        <div class="expense">
+            <h2 id="expense">Expense:</h2>
+        </div>
+        <div id="log-out">
+            <a href="./login.html" id="log-o">Log Out</a>
+        </div>
+        <div id="download-div">
+            <button id="download-button" onclick="downloadExpense(event)">Download</button>
+        </div>
+        <div id="leaderboard">
+            <button id="leader-btn"><h6 id="leader-heading" onclick="showLeaderboard()">Leaderboard</h6>
+            </button>
+        </div>
+        <div id="account-detail">
+            <button id="account-btn" onclick="buyPremiumMembership(event)"><h6 id="premium"></h6>
+            </button>
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        </div>
+    </header>
+    
+    <div id="main-div">
+    <div id="list-header">
+        <div class="category">
+            <h2>Category</h2>
+        </div>
+        <div class="description">
+            <h2>Description</h2>
+        </div>
+        <div class="amount">
+            <h2>Amount</h2>
+        </div>
+    </div>
+        <div id="month-header">
+            <div class="category">
+                <a id="day" onclick="getExpenseDetails(1,'day')"><h2>Daily</h2></a>
+            </div>
+            <div class="description">
+                <a id="month" onclick="getExpenseDetails(1, 'month')"><h2>Monthly</h2></a>
+            </div>
+            <div class="amount">
+                <a id="year" onclick="getExpenseDetails(1, 'year')"><h2>Yearly</h2></a>
+            </div>
+        </div>
+    </div>
+    <main id="main-container">
+        <ul id="list-group">
+            
+        </ul>
+        
+        <div id="expense-form-container" style="display: none;">
+            <form id="expense-form" onsubmit="submitExpense(event)">
+                <!-- Add your input fields and other form elements here -->
+                <select id="category" name="category" value="Category" required>
+                    <option value="Category" selected>Category</option>
+                    <option value="food">Food</option>
+                    <option value="travel">Travel</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <!-- Add more options as needed -->
+                </select>
+                <input type="text" id="expense-name" placeholder="Expense Description" required>
+                <input type="number" id="expense-amount" placeholder="Expense Amount" required>
+                <button type="submit" id="submit-btn">Submit</button>
+            </form>
+        </div>
+        <div id="income-form-container" style="display: none;">
+            <form id="expense-form" onsubmit="submitIncome(event)">
+                <input type="number" id="income-amount" placeholder="Income Amount">
+                <button type="submit" id="submit-btn">Submit</button>
+            </form>
+        </div>
+        
+        <div id="button-container-minus">
+            <button id="subtract-button" onclick="displayExpenseForm()">-</button>
+        </div>
+        <div id="button-container-plus">
+            <button id="add-button" onclick="displayIncomeForm()">+</button>
+        </div>
+    </main>
+    <div id="pagination">
+        <!-- <a class="page" href="/?page=1">1</a>
+        <a class="page" href="/?page=2">2</a> -->
+    </div>
+</div>
+<div class="leader-div"></div>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="../JS/expenseHome.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="../CSS/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+</head>
+
+<body>
+    <form id="container" onsubmit="getUserDetail(event)" method="POST">
+        <div id="heading-div">Sign In</div>
+        <div class="email-div">
+            <i class='fas fa-envelope-open-text' id="em"></i>
+            <input type="email" name="email" class="input" placeholder="E-mail" id="email-ip" required>
+        </div>
+        <div class="password-div">
+            <i class='fa fa-lock' id="lc"></i>
+            <input type="password" name="password" class="input" placeholder="Password" id="password-ip" required>
+        </div>
+        <div id="button-div">
+            <button type="submit" class="btn" id="btn">Log in</button>
+        </div>
+        <div id="error">
+            <h2 id="error-heading"></h2>
+        </div>
+        <div class="login-div" id="forgot">
+            <h2 id="term-condition">Forgot Password?<a style="cursor: pointer;" href="./forgotPassword.html">Click Here</a></strong></a></h2>
+        </div>
+        <div class="login-div" id="signup">
+            <h2 id="term-condition">If you don't have an account <br>Please Create New One <a href="./signup.html">Sign
+                    Up</a></strong></a></h2>
+        </div>
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../JS/login.js"></script>
+</body>
+
+</html>

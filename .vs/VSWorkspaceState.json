@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\controllers",
+    "\\middelware",
+    "\\models",
+    "\\routes",
+    "\\util",
+    "\\views",
+    "\\views\\CSS",
+    "\\views\\HTML",
+    "\\views\\JS"
+  ],
+  "SelectedNode": "\\models\\forgotPassword.js",
+  "PreviewInSolutionExplorer": false
+}
