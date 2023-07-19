@@ -1,16 +1,17 @@
-const Sequelize = require('sequelize');
-const sequelize = require('../util/database');
+const mongoose = require('mongoose');
 
+const Schema = mongoose.Schema;
 
-const Leaderboard = sequelize.define('leaderboard' ,{
-    id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
-        allowNull: false,
-        primaryKey: true
-      },
-      username: Sequelize.STRING,
-      totalexpense: Sequelize.STRING
+const leaderBoardSchema = new Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
+    required: true,
+    ref: 'User'
+  },
+  totalExpense: {
+    type: Number,
+    require: true
+  }
 })
 
-module.exports = Leaderboard;
+module.exports = mongoose.model('Leaderboard', leaderBoardSchema);

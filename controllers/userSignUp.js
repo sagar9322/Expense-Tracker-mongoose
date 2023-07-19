@@ -1,15 +1,11 @@
-const userDetail = require('../models/userSignUp');
+const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const RazorPay = require('razorpay');
 const Order = require('../models/orders');
-const sequelize = require('../util/database');
-const ExpenseDetail = require('../models/expense');
 const Leaderboard = require('../models/leaderboard');
-const ForgotPasswordRequest = require('../models/forgotPassword');
+const ForgotPassword = require('../models/forgotPassword');
 const Sib = require('sib-api-v3-sdk');
-const path = require('path');
-const fs = require('fs');
 const client = Sib.ApiClient.instance;
 require('dotenv').config();
 
@@ -23,21 +19,30 @@ exports.postUserDetails = async (req, res, next) => {
     const password = req.body.password;
 
     try {
-        const availableUser = await userDetail.findAll({ where: { email: email } });
+        const availableUser = await User.find({ email: email });
 
         if (availableUser.length !== 0) {
+            
             return res.status(409).json({ message: 'User is already available' });
+        }else{
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
+            const user = await new User({
+                name: name,
+                email: email,
+                password: hashedPassword,
+                isPremeumuser: false,
+                expenseId: [],
+                income: 0,
+                orderId: [],
+                forgotPasswordId: []
+            })
+            await user.save()
+    
+            res.status(200).json({ message: "submitted" });
         }
 
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        await userDetail.create({
-            name: name,
-            email: email,
-            password: hashedPassword
-        });
-
-        res.status(200).json({ message: "submitted" });
+        
     } catch (err) {
         console.log(err);
         res.status(500).json({ message: "Error occurred while saving user details" });
@@ -49,16 +54,16 @@ exports.getUserDetail = async (req, res, next) => {
     const password = req.body.password;
 
     try {
-        const user = await userDetail.findOne({ where: { email: email } });
+        const user = await User.findOne({ email: email });
+        
 
         if (!user) {
             return res.status(404).json({ message: "Email or Password doesn't match" });
         }
-
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (passwordMatch) {
-            return res.status(200).json({ message: 'Login Successfully', token: generateAccessToken(user.id) });
+            return res.status(200).json({ message: 'Login Successfully', token: generateAccessToken(user._id) });
         } else {
             return res.status(401).json({ message: "Password is incorrect" });
         }
@@ -82,8 +87,15 @@ exports.buyPremium = async (req, res, next) => {
             }
 
             try {
-                await req.user.createOrder({ orderid: order.id, status: order.status, userId: req.user.id });
-                res.status(201).json({ order, key_id: rzp.key_id });
+                
+                const order1 = new Order({
+                    paymentid: null,
+                    orderid: order.id,
+                    status: order.status
+                })
+                await order1.save();
+                await User.findByIdAndUpdate(req.user, { $push: { orderId: order1._id } }, { new: true });
+                res.status(201).json({ order1, key_id: rzp.key_id });
             } catch (err) {
                 throw new Error(err);
             }
@@ -97,14 +109,19 @@ exports.buyPremium = async (req, res, next) => {
 exports.updatePremium = async (req, res, next) => {
     try {
         const { payment_id, order_id } = req.body;
-        const order = await Order.findOne({ where: { orderid: order_id } });
+        const order = await Order.findOne({ orderid: order_id });
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
 
-        await order.update({ paymentid: payment_id, status: "SUCCESSFUL" });
-        await req.user.update({ ispremiumuser: true });
+        order.paymentid = payment_id;
+        order.status = "SUCCESSFUL"
+        order.save();
+
+        const user = await User.findById(req.user)
+             user.isPremeumuser = true;
+             user.save();
 
         res.status(202).json({ success: true, message: "Transaction Successful" });
     } catch (err) {
@@ -115,7 +132,8 @@ exports.updatePremium = async (req, res, next) => {
 
 exports.getLeaderboard = async (req, res, next) => {
     try {
-        const details = await Leaderboard.findAll();
+        const details = await Leaderboard.find().populate('userId').sort({ totalExpense: -1 });
+       
         res.status(200).json({ detail: details });
     } catch (err) {
         console.log(err);
@@ -128,17 +146,20 @@ exports.getPassword = async (req, res, next)=> {
     const email = req.body.email;
 
   try {
-    const user = await userDetail.findOne({ where: { email: email } });
+    const user = await User.findOne({email: email });
     if (!user) {
       return res.status(404).json({ message: "Email not available" });
     }
-
-    const request = await ForgotPasswordRequest.create({
-      uid: user.id,
-      isactive: true
-    });
-    console.log(request);
-    const link = `http://localhost:3000/password/${request.id}`;
+const request = new ForgotPassword({
+    uid: req.user,
+    isactive: true
+})
+await request.save();
+user.forgotPasswordId = request._id;
+await user.save();
+    
+    
+    const link = `http://localhost:3000/password/${request._id}`;
 
     const apiKey = client.authentications["api-key"];
     apiKey.apiKey = process.env.SIB_KEY;
@@ -160,7 +181,7 @@ exports.getPassword = async (req, res, next)=> {
       subject: "Forgot Email Recovery",
       textContent: `Reset Your Password by Clicking Below Link: ${link}`,
     });
-    const confirmation = await ForgotPasswordRequest.findOne({id: request.id})
+    const confirmation = await ForgotPassword.findOne({_id: request._id})
 
     async function waitForConfirmation() {
         while (confirmation.isactive === false) {
@@ -181,7 +202,7 @@ exports.getPassword = async (req, res, next)=> {
 exports.setPassword = async (req, res, next)=> {
     const uuId = req.params.uuId;
 
-    const request = await ForgotPasswordRequest.findOne({ where: { id: uuId } });
+    const request = await ForgotPassword.findOne({ _id: uuId });
 
     if(request){
       res.redirect('/HTML/forgotPasswordForm.html');
@@ -195,16 +216,15 @@ exports.updatePassword = async (req, res, next) => {
     const updatePassword = req.body.password;
     const email = req.body.email;
     try{
-        const user = await userDetail.findOne({ where: { email: email } });
+        const user = await User.findOne({email: email});
 
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(updatePassword, saltRounds);
     
-        await user.update({password: hashedPassword});
+        user.password = hashedPassword;
+        await user.save();
     
-        const request = await ForgotPasswordRequest.findOne({where: {uid: user.id}});
-    
-        await request.update({isactive: false});
+        const request = await ForgotPassword.findOneAndDelete({uid: user._id});
     
         res.status(200).json({message: "done"});
     }catch(err){

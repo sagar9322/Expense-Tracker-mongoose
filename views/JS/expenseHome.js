@@ -92,14 +92,9 @@ async function getIncomeDetail() {
     };
 
     try {
-        const response = await axios.get('http://localhost:3000/get-income', { headers });
+        const response = await axios.post('http://localhost:3000/get-income', {}, { headers });
 
-        const incomeDetail = response.data;
-        let totalIncome = 0;
-
-        incomeDetail.forEach(detail => {
-            totalIncome += Number(detail.income);
-        });
+        const totalIncome = response.data.income;
 
         document.getElementById('income').textContent = `Income: ${totalIncome}`;
     } catch (error) {
@@ -115,10 +110,11 @@ async function buyPremiumMembership(event) {
     };
 
     try {
-        const response = await axios.get('http://localhost:3000/buy-premium', { headers });
+        const response = await axios.post('http://localhost:3000/buy-premium', {},  { headers });
+        console.log(response.data)
         const options = {
             "key": response.data.key_id,
-            "order_id": response.data.order.id,
+            "order_id": response.data.order1.orderid,
             "handler": async (response) => {
                 await axios.post('http://localhost:3000/update-tarnsaction-status', {
                     order_id: options.order_id,
@@ -142,8 +138,8 @@ async function buyPremiumMembership(event) {
 }
 
 function showLeaderboard() {
+
     axios.get('http://localhost:3000/leaderboard').then((response) => {
-        console.log(response.data.detail);
         const sortedUsers = response.data.detail.sort((a, b) => b.totalexpense - a.totalexpense);
 
         // Create a new div to contain the leaderboard
@@ -154,7 +150,7 @@ function showLeaderboard() {
         // Iterate over each user and create a list item to display their details
         sortedUsers.forEach((user) => {
             const listItem = document.createElement('li');
-            listItem.textContent = `${user.username} - Total Expense: ${user.totalexpense}`;
+            listItem.textContent = `${user.userId.name} - Total Expense: ${user.totalExpense}`;
             listItem.style.fontSize = "25px";
             listItem.style.listStyle = "number";
             listGroup.appendChild(listItem);
@@ -162,16 +158,7 @@ function showLeaderboard() {
 
         // Append the leaderboard div to the document body
         document.getElementById('pagination').style.display = "none";
-        // document.getElementById('main-container').style.display = "block";
-        // document.getElementById('list-header').style.display = "none";
-        // document.getElementById('expense-form-container').style.display = "none";
-        // document.getElementById('income-form-container').style.display = "none";
-        // document.getElementById('button-container-minus').style.display = "none";
-        // document.getElementById('button-container-plus').style.display = "none";
-        // document.getElementById('expense-form-container').style.display = "none";
-        // document.getElementById('income-form-container').style.display = "none";
-        // document.getElementById('button-container-minus').style.display = "none";
-        // document.getElementById('button-container-plus').style.display = "none";
+       
     });
 }
 
@@ -185,145 +172,118 @@ async function initializeApp() {
 }
 
 
-async function getExpenseDetails(number, filter) {
+async function getExpenseDetails(pageNumber, filter) {
     const token = localStorage.getItem('token');
     const headers = {
-        'Authorization': token,
-        'Content-Type': 'application/json'
+      'Authorization': token,
+      'Content-Type': 'application/json'
     };
-
+  
     try {
-        const response = await axios.get(`http://localhost:3000/get-expense/12?page=${number}`, { headers });
-        let expenses = response.data.detail;
-        let totalExpense = 0;
-        expenses.forEach(expense => {
-            totalExpense += Number(expense.amount);
+      const response = await axios.post(`http://localhost:3000/get-expense/12?pageNumber=${pageNumber}&filter=${filter}`, {}, { headers });
+      const expenses = response.data.detail;
+      
+      let totalExpense = 0;
+      
+      const listGroup = document.getElementById('list-group');
+      listGroup.innerHTML = "";
+      listGroup.style.alignItems = "stretch";
+      // Iterate over the expenses and create list items
+      expenses.forEach(expense => {
+        const listId = expense._id;
+        totalExpense = Number(totalExpense) + Number(expense.amount);
+        // Create list item
+        const listItem = document.createElement('li');
+        listItem.className = 'list-item';
+  
+        // Create expense details container div
+        const expenseDetails = document.createElement('div');
+        expenseDetails.className = 'expense-details';
+  
+        // Create separate divs for each expense detail
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'detail';
+        categoryDiv.textContent = expense.category;
+  
+        const descriptionDiv = document.createElement('div');
+        descriptionDiv.className = 'detail';
+        descriptionDiv.textContent = expense.description;
+  
+        const amountDiv = document.createElement('div');
+        amountDiv.className = 'detail';
+        amountDiv.textContent = expense.amount;
+  
+        // Append expense details divs to the expense details container
+        expenseDetails.appendChild(categoryDiv);
+        expenseDetails.appendChild(descriptionDiv);
+        expenseDetails.appendChild(amountDiv);
+  
+        // Create delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-btn';
+        deleteButton.textContent = 'X';
+  
+        // Add click event listener to delete button
+        deleteButton.onclick = (event) => {
+          event.preventDefault();
+          deleteFromServer(listId);
+        };
+  
+        // Append expense details container and delete button to list item
+        listItem.appendChild(expenseDetails);
+        listItem.appendChild(deleteButton);
+  
+        // Append list item to list group
+        listGroup.appendChild(listItem);
+      });
+  
+      document.getElementById('expense').textContent = `Expense: ${totalExpense}`;
+  
+      const paginationContainer = document.getElementById('pagination');
+      document.getElementById('pagination').style.display = "flex";
+      paginationContainer.innerHTML = "";
+  
+      const totalPages = response.data.totalPages;
+      // Create page buttons
+      for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.classList.add('page');
+  
+        // Highlight the current page button
+        if (i === pageNumber) {
+          pageButton.classList.add('active');
+        }
+  
+        // Attach click event listener to each page button
+        pageButton.addEventListener('click', () => {
+          getExpenseDetails(i, filter);
         });
-        
-        const listGroup = document.getElementById('list-group');
-        listGroup.innerHTML = "";
-
-        
-
-        let filterType = filter;
-        const currentDate = new Date();
-        let filteredExpenses;
-
-        if (filterType === 'month') {
-            const currentMonth = currentDate.getMonth();
-            filteredExpenses = expenses.filter(expense => new Date(expense.createdAt).getMonth() === currentMonth);
-        } else if (filterType === 'day') {
-            const currentDay = currentDate.getDate();
-            filteredExpenses = expenses.filter(expense => new Date(expense.createdAt).getDate() === currentDay);
-        } else if (filterType === 'year') {
-            const currentYear = currentDate.getFullYear();
-            filteredExpenses = expenses.filter(expense => new Date(expense.createdAt).getFullYear() === currentYear);
-        } else {
-            filteredExpenses = expenses;
-        }
-
-        // Pagination
-        const itemsPerPage = 5;
-        const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
-        const startIndex = (number - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const currentPageExpenses = filteredExpenses.slice(startIndex, endIndex);
-
-        // Iterate over the expenses and create list items
-        currentPageExpenses.forEach(expense => {
-            const listId = expense.id;
-
-            // Create list item
-            const listItem = document.createElement('li');
-            listItem.className = 'list-item';
-
-            // Create expense details container div
-            const expenseDetails = document.createElement('div');
-            expenseDetails.className = 'expense-details';
-
-            // Create separate divs for each expense detail
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'detail';
-            categoryDiv.textContent = expense.category;
-
-            const descriptionDiv = document.createElement('div');
-            descriptionDiv.className = 'detail';
-            descriptionDiv.textContent = expense.description;
-
-            const amountDiv = document.createElement('div');
-            amountDiv.className = 'detail';
-            amountDiv.textContent = expense.amount;
-
-            
-
-            // Append expense details divs to the expense details container
-            expenseDetails.appendChild(categoryDiv);
-            expenseDetails.appendChild(descriptionDiv);
-            expenseDetails.appendChild(amountDiv);
-
-            // Create delete button
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'delete-btn';
-            deleteButton.textContent = 'X';
-
-            // Add click event listener to delete button
-            deleteButton.onclick = (event) => {
-                event.preventDefault();
-                deleteFromServer(listId);
-            };
-
-            // Append expense details container and delete button to list item
-            listItem.appendChild(expenseDetails);
-            listItem.appendChild(deleteButton);
-
-            // Append list item to list group
-            listGroup.appendChild(listItem);
-        });
-
-        document.getElementById('expense').textContent = `Expense: ${totalExpense}`;
-
-        const paginationContainer = document.getElementById('pagination');
-        document.getElementById('pagination').style.display = "flex";
-        paginationContainer.innerHTML = "";
-
-        // Create page buttons
-        for (let i = 1; i <= totalPages; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.textContent = i;
-            pageButton.classList.add('page');
-
-            // Highlight the current page button
-            if (i === number) {
-                pageButton.classList.add('active');
-            }
-
-            // Attach click event listener to each page button
-            pageButton.addEventListener('click', () => {
-                getExpenseDetails(i, filter);
-            });
-
-            paginationContainer.appendChild(pageButton);
-        }
-
-        if (response.data.ispremium === true) {
-            document.getElementById('premium').textContent = "⭐";
-            document.getElementById('premium').style.fontSize = "30px";
-            document.getElementById('list-header').style.display = "none";
-            const button = document.getElementById('account-btn');
-            button.onclick = (event) => {
-                event.preventDefault();
-              };
-        } else {
-            document.getElementById('premium').textContent = "Buy Premium";
-            document.getElementById('leaderboard').style.display = "none";
-            document.getElementById('download-button').style.display = "none";
-            document.getElementById('list-header').style.display = "flex";
-            document.getElementById('month-header').style.display = "none";
-        }
+  
+        paginationContainer.appendChild(pageButton);
+      }
+  
+      const isPremiumUser = response.data.ispremiumuser;
+      
+      if (isPremiumUser === true) {
+        document.getElementById('premium').textContent = "⭐";
+        document.getElementById('premium').style.fontSize = "30px";
+        document.getElementById('list-header').style.display = "none";
+        const button = document.getElementById('account-btn');
+        button.onclick = (event) => {
+          event.preventDefault();
+        };
+      } else {
+        document.getElementById('premium').textContent = "Buy Premium";
+        document.getElementById('leaderboard').style.display = "none";
+        document.getElementById('download-button').style.display = "none";
+        document.getElementById('list-header').style.display = "flex";
+        document.getElementById('month-header').style.display = "none";
+      }
     } catch (error) {
-        console.error('Error fetching expense data:', error);
+      console.error('Error fetching expense data:', error);
     }
-}
+  }
 
 
 async function downloadExpense(event) {

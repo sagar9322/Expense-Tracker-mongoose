@@ -1,35 +1,20 @@
 const express = require('express');
 const cors = require('cors');
-const User = require('./models/userSignUp');
-const ExpenseDetail = require('./models/expense');
-const Income = require('./models/income');
-const Order = require('./models/orders');
-const Leaderboard = require('./models/leaderboard');
-const ForgotPasswordRequest = require('./models/forgotPassword');
+
 const path = require('path');
-const helmet = require('helmet');
-const compression = require('compression');
-const morgan = require('morgan');
-const fs = require('fs');
-const https = require('https');
 
 
+const mongoose = require('mongoose');
 const app = express();
 app.use(express.static(path.join(__dirname, 'views')));
-const accessLogStream = fs.createWriteStream(path.join(__dirname, 'acess.log'), {flag: 'a'});
+
 app.use(cors());
 app.use(express.json());
-app.use(helmet());
-app.use(compression());
-app.use(morgan('combined', {stream: accessLogStream}));
-const privateKey = fs.readFileSync('server.key');
-const certificate = fs.readFileSync('server.cert');
+
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 
-
-const sequelize = require('./util/database');
 const userRoutes = require('./routes/user');
 app.use(userRoutes);
 app.use((req, res, next) =>{
@@ -38,25 +23,25 @@ app.use((req, res, next) =>{
 })
 
 
-User.hasMany(ExpenseDetail, { onDelete: 'CASCADE' });
-ExpenseDetail.belongsTo(User);
-Income.hasMany(User);
-User.hasMany(Income, { onDelete: 'CASCADE' });
-User.hasMany(Order, { onDelete: 'CASCADE' });
-Order.belongsTo(User);
-Leaderboard.hasMany(User);
-User.hasOne(Leaderboard, { onDelete: 'CASCADE' });
-User.hasMany(ForgotPasswordRequest, { onDelete: 'CASCADE' });
+// User.hasMany(ExpenseDetail, { onDelete: 'CASCADE' });
+// ExpenseDetail.belongsTo(User);
+// Income.hasMany(User);
+// User.hasMany(Income, { onDelete: 'CASCADE' });
+// User.hasMany(Order, { onDelete: 'CASCADE' });
+// Order.belongsTo(User);
+// Leaderboard.hasMany(User);
+// User.hasOne(Leaderboard, { onDelete: 'CASCADE' });
+// User.hasMany(ForgotPasswordRequest, { onDelete: 'CASCADE' });
 
 
 
+mongoose.connect(`mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONGO_PWD}@cluster0.nu2y6hy.mongodb.net/?retryWrites=true&w=majority`)
+.then(result => {
+  console.log("connected");
+  app.listen(3000);
+})
+.catch(err => {
+  console.log(err);
+})
 
-sequelize
-  .sync()
-  .then(result => {
-    // https.createServer({key: privateKey, cert: certificate}, app).listen(process.env.PORT ||3000);
-    app.listen(3000);
-  })
-  .catch(err => {
-    console.log(err);
-  });
+

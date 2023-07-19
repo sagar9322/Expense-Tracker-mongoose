@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/userSignUp');
+const User = require('../models/user');
 
 exports.authenticate = (req, res, next) => {
     try{
@@ -10,7 +10,7 @@ exports.authenticate = (req, res, next) => {
             return decoded;
         });
         
-        User.findByPk(user.userId).then(user => {
+        User.findById(user.userId).then(user => {
             req.user = user;
             next();
         })
