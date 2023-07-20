@@ -1,10 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-
 const path = require('path');
-
-
 const mongoose = require('mongoose');
+
+
 const app = express();
 app.use(express.static(path.join(__dirname, 'views')));
 
@@ -21,17 +20,6 @@ app.use((req, res, next) =>{
   console.log("done");
   res.sendFile(path.join(__dirname, `views/${req.url}`));
 })
-
-
-// User.hasMany(ExpenseDetail, { onDelete: 'CASCADE' });
-// ExpenseDetail.belongsTo(User);
-// Income.hasMany(User);
-// User.hasMany(Income, { onDelete: 'CASCADE' });
-// User.hasMany(Order, { onDelete: 'CASCADE' });
-// Order.belongsTo(User);
-// Leaderboard.hasMany(User);
-// User.hasOne(Leaderboard, { onDelete: 'CASCADE' });
-// User.hasMany(ForgotPasswordRequest, { onDelete: 'CASCADE' });
 
 
 

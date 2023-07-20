@@ -1,22 +1,29 @@
 function displayExpenseForm() {
+    
     if (document.getElementById("expense-form-container").style.display == "block") {
         document.getElementById("expense-form-container").style.display = "none";
+        document.querySelector('.page').style.display = 'flex';
     } else {
         document.getElementById("expense-form-container").style.display = "block";
         document.getElementById("income-form-container").style.display = "none";
+        document.querySelector('.page').style.display = 'none';
     }
 }
 
 function displayIncomeForm() {
+    
     if (document.getElementById("income-form-container").style.display == "block") {
         document.getElementById("income-form-container").style.display = "none";
+        document.querySelector('.page').style.display = 'flex';
     } else {
         document.getElementById("income-form-container").style.display = "block";
         document.getElementById("expense-form-container").style.display = "none";
+        document.querySelector('.page').style.display = 'none';
     }
 }
 
 async function submitExpense(event) {
+    document.querySelector('.page').style.display = 'flex';
     event.preventDefault();
     const category = document.getElementById('category').value;
     const description = document.getElementById('expense-name').value;
@@ -47,6 +54,7 @@ async function submitExpense(event) {
 }
 
 async function submitIncome(event) {
+    document.querySelector('.page').style.display = 'flex';
     event.preventDefault();
     const income = document.getElementById('income-amount').value;
 
@@ -78,7 +86,7 @@ async function deleteFromServer(listId) {
 
     try {
         await axios.delete(`http://localhost:3000/delete-list/${listId}`, { headers });
-        await getExpenseDetails(1);
+        await getExpenseDetails(1, "day");
     } catch (error) {
         console.error('Error deleting expense:', error);
     }
@@ -236,6 +244,13 @@ async function getExpenseDetails(pageNumber, filter) {
         // Append list item to list group
         listGroup.appendChild(listItem);
       });
+
+      
+        
+        document.getElementById('day').style.color = "white";
+        document.getElementById('month').style.color = "white";
+        document.getElementById('year').style.color = "white";
+        document.getElementById(`${filter}`).style.color = "black";
   
       document.getElementById('expense').textContent = `Expense: ${totalExpense}`;
   
@@ -244,11 +259,13 @@ async function getExpenseDetails(pageNumber, filter) {
       paginationContainer.innerHTML = "";
   
       const totalPages = response.data.totalPages;
+      
       // Create page buttons
       for (let i = 1; i <= totalPages; i++) {
         const pageButton = document.createElement('button');
         pageButton.textContent = i;
         pageButton.classList.add('page');
+        pageButton.style.alignItems = "center";
   
         // Highlight the current page button
         if (i === pageNumber) {

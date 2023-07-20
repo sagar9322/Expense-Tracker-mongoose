@@ -1,9 +1,10 @@
-
 const User = require('../models/user');
 
 exports.postIncomeDetail = async (req, res, next) => {
   try {
     const incomeDe = req.body.income;
+
+    // will get reqested user and will update income
     const user = await User.findOne({_id: req.user})
     user.income = Number(user.income) + Number(incomeDe);
     user.save();

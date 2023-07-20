@@ -13,21 +13,23 @@ function generateAccessToken(id) {
     return jwt.sign({ userId: id }, process.env.TOKEN_SECRET_KEY);
 }
 
+
 exports.postUserDetails = async (req, res, next) => {
     const name = req.body.name;
     const email = req.body.email;
     const password = req.body.password;
 
     try {
+        // it will check. is user available with same email?
         const availableUser = await User.find({ email: email });
 
         if (availableUser.length !== 0) {
-            
             return res.status(409).json({ message: 'User is already available' });
-        }else{
+        } else {
+            // if not available will create new one
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(password, saltRounds);
-            const user = await new User({
+            const user = new User({
                 name: name,
                 email: email,
                 password: hashedPassword,
@@ -38,28 +40,32 @@ exports.postUserDetails = async (req, res, next) => {
                 forgotPasswordId: []
             })
             await user.save()
-    
+
             res.status(200).json({ message: "submitted" });
         }
-
-        
     } catch (err) {
         console.log(err);
         res.status(500).json({ message: "Error occurred while saving user details" });
     }
 };
 
+
+
 exports.getUserDetail = async (req, res, next) => {
     const email = req.body.email;
     const password = req.body.password;
 
     try {
+
+        // will try to find user with same email
         const user = await User.findOne({ email: email });
-        
+
 
         if (!user) {
             return res.status(404).json({ message: "Email or Password doesn't match" });
         }
+
+        // will check password that it is correct or not
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (passwordMatch) {
@@ -72,6 +78,8 @@ exports.getUserDetail = async (req, res, next) => {
         res.status(500).json({ message: "An error occurred" });
     }
 };
+
+
 
 exports.buyPremium = async (req, res, next) => {
     try {
@@ -87,13 +95,15 @@ exports.buyPremium = async (req, res, next) => {
             }
 
             try {
-                
+                // order object will create here
                 const order1 = new Order({
                     paymentid: null,
                     orderid: order.id,
                     status: order.status
                 })
                 await order1.save();
+
+                // after object creation reference id will be updated to user of that order
                 await User.findByIdAndUpdate(req.user, { $push: { orderId: order1._id } }, { new: true });
                 res.status(201).json({ order1, key_id: rzp.key_id });
             } catch (err) {
@@ -109,19 +119,22 @@ exports.buyPremium = async (req, res, next) => {
 exports.updatePremium = async (req, res, next) => {
     try {
         const { payment_id, order_id } = req.body;
+
+        // order will find with orderId
         const order = await Order.findOne({ orderid: order_id });
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
 
+        // order details will be updated here after successfull compeletion
         order.paymentid = payment_id;
         order.status = "SUCCESSFUL"
         order.save();
 
         const user = await User.findById(req.user)
-             user.isPremeumuser = true;
-             user.save();
+        user.isPremeumuser = true;
+        user.save();
 
         res.status(202).json({ success: true, message: "Transaction Successful" });
     } catch (err) {
@@ -132,8 +145,8 @@ exports.updatePremium = async (req, res, next) => {
 
 exports.getLeaderboard = async (req, res, next) => {
     try {
-        const details = await Leaderboard.find().populate('userId').sort({ totalExpense: -1 });
-       
+        const details = await Leaderboard.find().populate('userId').sort({ totalExpense: -1 }); // mongoose sort method will take key value "totalExpense", based on that sorting will done. -1 indicate descending order.
+
         res.status(200).json({ detail: details });
     } catch (err) {
         console.log(err);
@@ -142,94 +155,102 @@ exports.getLeaderboard = async (req, res, next) => {
 }
 
 
-exports.getPassword = async (req, res, next)=> {
+exports.getPassword = async (req, res, next) => {
     const email = req.body.email;
 
-  try {
-    const user = await User.findOne({email: email });
-    if (!user) {
-      return res.status(404).json({ message: "Email not available" });
-    }
-const request = new ForgotPassword({
-    uid: req.user,
-    isactive: true
-})
-await request.save();
-user.forgotPasswordId = request._id;
-await user.save();
-    
-    
-    const link = `http://localhost:3000/password/${request._id}`;
+    try {
 
-    const apiKey = client.authentications["api-key"];
-    apiKey.apiKey = process.env.SIB_KEY;
-
-    const tranEmailApi = new Sib.TransactionalEmailsApi();
-
-    const sender = {
-      email: "sagarcorporateacc@gmail.com",
-    };
-    const receivers = [
-      {
-        email: `${req.body.email}`,
-      },
-    ];
-
-    await tranEmailApi.sendTransacEmail({
-      sender,
-      to: receivers,
-      subject: "Forgot Email Recovery",
-      textContent: `Reset Your Password by Clicking Below Link: ${link}`,
-    });
-    const confirmation = await ForgotPassword.findOne({_id: request._id})
-
-    async function waitForConfirmation() {
-        while (confirmation.isactive === false) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+        // will find user with same email
+        const user = await User.findOne({ email: email });
+        if (!user) {
+            return res.status(404).json({ message: "Email not available" });
         }
-        console.log("Email sent successfully");
-        res.status(200).json({ message: "Sending done" });
-      }
-      
-      waitForConfirmation();
-    
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Internal server error" });
-  }
+
+        // will create request related to user
+        const request = new ForgotPassword({
+            uid: req.user,
+            isactive: true
+        })
+        await request.save();
+
+        // it will update forgotPasswordId in user collection
+        user.forgotPasswordId = request._id;
+        await user.save();
+
+
+        const link = `http://localhost:3000/password/${request._id}`;
+
+        const apiKey = client.authentications["api-key"];
+        apiKey.apiKey = process.env.SIB_KEY;
+
+        const tranEmailApi = new Sib.TransactionalEmailsApi();
+
+        const sender = {
+            email: "sagarcorporateacc@gmail.com",
+        };
+        const receivers = [
+            {
+                email: `${req.body.email}`,
+            },
+        ];
+
+        await tranEmailApi.sendTransacEmail({
+            sender,
+            to: receivers,
+            subject: "Forgot Email Recovery",
+            textContent: `Reset Your Password by Clicking Below Link: ${link}`,
+        });
+
+        
+        const confirmation = await ForgotPassword.findOne({ _id: request._id })
+
+        async function waitForConfirmation() {
+            while (confirmation.isactive === false) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+            }
+            console.log("Email sent successfully");
+            res.status(200).json({ message: "Sending done" });
+        }
+
+        waitForConfirmation();
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Internal server error" });
+    }
 }
 
-exports.setPassword = async (req, res, next)=> {
+exports.setPassword = async (req, res, next) => {
     const uuId = req.params.uuId;
 
     const request = await ForgotPassword.findOne({ _id: uuId });
 
-    if(request){
-      res.redirect('/HTML/forgotPasswordForm.html');
+    if (request) {
+        res.redirect('/HTML/forgotPasswordForm.html');
     }
-    else{
-        res.status(404).json({message: "somthing went wrong"});
+    else {
+        res.status(404).json({ message: "somthing went wrong" });
     }
 }
 
 exports.updatePassword = async (req, res, next) => {
     const updatePassword = req.body.password;
     const email = req.body.email;
-    try{
-        const user = await User.findOne({email: email});
+    try {
+        const user = await User.findOne({ email: email });
 
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(updatePassword, saltRounds);
-    
+
         user.password = hashedPassword;
         await user.save();
-    
-        const request = await ForgotPassword.findOneAndDelete({uid: user._id});
-    
-        res.status(200).json({message: "done"});
-    }catch(err){
+
+        const request = await ForgotPassword.findOneAndDelete({ uid: user._id });
+
+        res.status(200).json({ message: "done" });
+    } catch (err) {
         console.log(err);
     }
-    
-    
+
+
 }

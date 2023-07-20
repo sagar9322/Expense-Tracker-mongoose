@@ -11,6 +11,8 @@ exports.postExpenseDetail = async (req, res, next) => {
     const category = req.body.category;
     const description = req.body.description;
     const amount = req.body.amount;
+    
+    // first LeaderBoard will update
     const user = await Leaderboard.findOne({ userId: req.user });
 
 
@@ -21,11 +23,12 @@ exports.postExpenseDetail = async (req, res, next) => {
       })
       await leaderBoard.save()
 
-    } else {
+    }else {
       user.totalExpense = Number(user.totalExpense) + Number(amount);
       await user.save();
-
     }
+
+// then expense will create
     const expense = new Expense({
       category: category,
       description: description,
@@ -34,6 +37,7 @@ exports.postExpenseDetail = async (req, res, next) => {
     });
     await expense.save();
 
+    // now expenseId wiil be refer to user
     const updateUserWithExpense = async (userId, expenseIdToAdd) => {
       try {
         const updatedUser = await User.findByIdAndUpdate(userId, { $push: { expenseId: expenseIdToAdd } }, { new: true });
@@ -45,8 +49,6 @@ exports.postExpenseDetail = async (req, res, next) => {
 
     updateUserWithExpense(req.user, expense._id);
 
-
-
     res.status(200).json({ message: "submitted" });
   } catch (err) {
     console.log(err);
@@ -54,10 +56,12 @@ exports.postExpenseDetail = async (req, res, next) => {
   }
 };
 
+
+
 exports.getExpenseDetail = async (req, res, next) => {
-  const pageNumber = parseInt(req.query.pageNumber) || 1;
+  const pageNumber = parseInt(req.query.pageNumber) || 1;   // it convert string digit to Number
   const itemsPerPage = parseInt(req.query.itemsPerPage) || 5;
-  const filter = req.query.filter || 'all'; // Default to 'all' if no filter provided
+  const filter = req.query.filter;
 
   try {
     const user = await User.findById(req.user).populate({
@@ -98,7 +102,16 @@ exports.getExpenseDetail = async (req, res, next) => {
 
     const startIndex = (pageNumber - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedExpenses = user.expenseId.slice(startIndex, endIndex);
+    const paginatedExpenses = user.expenseId.filter((expense) => {
+      // The 'createdAt' field of the expense document
+      const expenseDate = expense.createdAt;
+      
+      // Checking if the expense date falls within the date range defined in 'filterCriteria'
+      return (
+        expenseDate >= filterCriteria.createdAt.$gte && 
+        expenseDate < filterCriteria.createdAt.$lt
+      );
+    }).slice(startIndex, endIndex);
 
     res.status(200).json({
       detail: paginatedExpenses,
@@ -115,13 +128,18 @@ exports.getExpenseDetail = async (req, res, next) => {
 
 exports.deleteList = async (req, res, next) => {
   try {
+    // expense will be deleted
     const expense = await Expense.findByIdAndDelete({
       _id: req.params.listId
     });
+
+    // expense amount will be changed as per expense amount
     const userLead = await Leaderboard.findOne({ userId: req.user });
    
     userLead.totalExpense = Number(userLead.totalExpense) - Number(expense.amount);
     await userLead.save();
+
+    // that particuler expenseId will be removed from user
     const user = await User.findOne({ _id: req.user });
 
     const updatedExpense = user.expenseId.filter(expense => {
@@ -129,6 +147,7 @@ exports.deleteList = async (req, res, next) => {
     })
     user.expenseId = updatedExpense;
     await user.save();
+
     res.status(200).json({ message: "done" });
   } catch (err) {
 
@@ -136,6 +155,8 @@ exports.deleteList = async (req, res, next) => {
     res.status(500).json({ message: "An error occurred" });
   }
 };
+
+
 
 function uploadToS3(data, filename) {
   const BUCKET_NAME = process.env.BUCKET_NAME;

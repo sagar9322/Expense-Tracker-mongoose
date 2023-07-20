@@ -361,6 +361,7 @@ select {
 #pagination{
     display: flex;
     position: fixed;
+    bottom: 50px;
     width: 150px;
     transform: translate(-50%, -50%);
     margin-top: 100px;
@@ -380,8 +381,6 @@ select {
 .page:hover{
     background: rgb(65, 127, 177);
     color: #fff;
-    width: 40px;
-    height: 60px;
     cursor: pointer;
 }
 
